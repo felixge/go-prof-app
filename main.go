@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	_ "embed"
 	"flag"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/julienschmidt/httprouter"
 	"gopkg.in/DataDog/dd-trace-go.v1/profiler"
 )
@@ -37,12 +39,13 @@ func run() error {
 			"goroutine": profiler.GoroutineProfile,
 		}
 
-		addrF         = flag.String("addr", "localhost:8080", "Listen addr for http server")
-		envF          = flag.String("env", "dev", "Name of the environment the app is running in")
-		ddKey         = flag.String("dd.key", "", "API key for dd-trace-go agentless profile uploading")
-		ddPeriod      = flag.Duration("dd.period", profiler.DefaultPeriod, "Profiling period for dd-trace-go")
-		ddCPUDuration = flag.Duration("dd.cpuDuration", profiler.DefaultDuration, "CPU duration for dd-trace-go")
-		versionF      = flag.Bool("version", false, "Print version and exit")
+		addrF          = flag.String("addr", "localhost:8080", "Listen addr for http server")
+		envF           = flag.String("env", "dev", "Name of the environment the app is running in")
+		powDifficultyF = flag.Int("powDifficulty", 5, "Difficulty level for pow")
+		ddKey          = flag.String("dd.key", "", "API key for dd-trace-go agentless profile uploading")
+		ddPeriod       = flag.Duration("dd.period", profiler.DefaultPeriod, "Profiling period for dd-trace-go")
+		ddCPUDuration  = flag.Duration("dd.cpuDuration", profiler.DefaultDuration, "CPU duration for dd-trace-go")
+		versionF       = flag.Bool("version", false, "Print version and exit")
 	)
 	flag.Func("dd.profiles", `Comma separated list of dd-trace-go profiles to enable (default "cpu,heap")`, func(val string) error {
 		profiles = nil
@@ -66,7 +69,7 @@ func run() error {
 		return nil
 	}
 
-	log.Println("Starting up")
+	log.Printf("Starting up at http %s", *addrF)
 	var profilesS []string
 	for _, p := range profiles {
 		profilesS = append(profilesS, p.String())
@@ -95,7 +98,13 @@ func run() error {
 	}
 	defer profiler.Stop()
 
+	db, err := sql.Open("pgx", "postgres://")
+	if err != nil {
+		return err
+	}
+
 	router := httprouter.New()
 	router.Handler("GET", "/", VersionHandler{Version: version})
+	router.Handler("POST", "/transaction", TransactionHandler{DB: db, PowDifficultiy: *powDifficultyF})
 	return http.ListenAndServe(*addrF, router)
 }
