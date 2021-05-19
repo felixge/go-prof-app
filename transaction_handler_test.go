@@ -27,8 +27,8 @@ func Test_calculatePoW(t *testing.T) {
 	}
 }
 
-func Benchmark_calculatePoW(b *testing.B) {
+func Benchmark_doPoW(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		calculatePoW(3, "foo")
+		doPoW("foo", 3)
 	}
 }

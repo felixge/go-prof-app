@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	_ "embed"
 	"flag"
 	"fmt"
@@ -10,8 +9,10 @@ import (
 	"os"
 	"strings"
 
-	_ "github.com/jackc/pgx/v4/stdlib"
-	"github.com/julienschmidt/httprouter"
+	"github.com/jackc/pgx/v4/stdlib"
+	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
+	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"gopkg.in/DataDog/dd-trace-go.v1/profiler"
 )
 
@@ -20,6 +21,8 @@ var (
 	rawVersion string
 	version    = strings.TrimSpace(rawVersion)
 )
+
+const service = "go-prof-app"
 
 func main() {
 	if err := run(); err != nil {
@@ -41,7 +44,7 @@ func run() error {
 
 		addrF          = flag.String("addr", "localhost:8080", "Listen addr for http server")
 		envF           = flag.String("env", "dev", "Name of the environment the app is running in")
-		powDifficultyF = flag.Int("powDifficulty", 5, "Difficulty level for pow")
+		powDifficultyF = flag.Int("powDifficulty", 4, "Difficulty level for pow")
 		ddKey          = flag.String("dd.key", "", "API key for dd-trace-go agentless profile uploading")
 		ddPeriod       = flag.Duration("dd.period", profiler.DefaultPeriod, "Profiling period for dd-trace-go")
 		ddCPUDuration  = flag.Duration("dd.cpuDuration", profiler.DefaultDuration, "CPU duration for dd-trace-go")
@@ -77,7 +80,7 @@ func run() error {
 	log.Printf("Enabled profiles: %v", profilesS)
 
 	profilerOptions := []profiler.Option{
-		profiler.WithService("go-prof-app"),
+		profiler.WithService(service),
 		profiler.WithEnv(*envF),
 		profiler.WithVersion(version),
 		profiler.WithProfileTypes(profiles...),
@@ -98,12 +101,20 @@ func run() error {
 	}
 	defer profiler.Stop()
 
-	db, err := sql.Open("pgx", "postgres://")
+	tracer.Start(
+		tracer.WithEnv(*envF),
+		tracer.WithService(service),
+		tracer.WithServiceVersion(version),
+	)
+	defer tracer.Stop()
+
+	sqltrace.Register("pgx", stdlib.GetDefaultDriver())
+	db, err := sqltrace.Open("pgx", "postgres://")
 	if err != nil {
 		return err
 	}
 
-	router := httprouter.New()
+	router := httptrace.New()
 	router.Handler("GET", "/", VersionHandler{Version: version})
 	router.Handler("POST", "/transaction", TransactionHandler{DB: db, PowDifficultiy: *powDifficultyF})
 	return http.ListenAndServe(*addrF, router)

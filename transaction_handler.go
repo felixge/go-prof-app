@@ -27,7 +27,7 @@ func (h TransactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var txID int
 	q := `INSERT INTO transactions (user_id, data) VALUES ($1, $2) RETURNING id`
-	row := h.DB.QueryRow(q, userID, data)
+	row := h.DB.QueryRowContext(r.Context(), q, userID, data)
 	if err := row.Scan(&txID); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "insert err: %s", err)
