@@ -22,13 +22,18 @@ var (
 	version    = strings.TrimSpace(rawVersion)
 )
 
-const service = "go-prof-app"
-
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func envWithDefault(key string, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
 }
 
 func run() error {
@@ -43,7 +48,8 @@ func run() error {
 		}
 
 		addrF          = flag.String("addr", "localhost:8080", "Listen addr for http server")
-		envF           = flag.String("env", "dev", "Name of the environment the app is running in")
+		serviceF       = flag.String("dd.service", envWithDefault("DD_SERVICE", "go-prof-app"), "Name of the service.")
+		envF           = flag.String("dd.env", envWithDefault("DD_ENV", "dev"), "Name of the environment the app is running in")
 		powDifficultyF = flag.Int("powDifficulty", 4, "Difficulty level for pow")
 		ddKey          = flag.String("dd.key", "", "API key for dd-trace-go agentless profile uploading")
 		ddPeriod       = flag.Duration("dd.period", profiler.DefaultPeriod, "Profiling period for dd-trace-go")
@@ -80,7 +86,7 @@ func run() error {
 	log.Printf("Enabled profiles: %v", profilesS)
 
 	profilerOptions := []profiler.Option{
-		profiler.WithService(service),
+		profiler.WithService(*serviceF),
 		profiler.WithEnv(*envF),
 		profiler.WithVersion(version),
 		profiler.WithProfileTypes(profiles...),
@@ -103,7 +109,7 @@ func run() error {
 
 	tracer.Start(
 		tracer.WithEnv(*envF),
-		tracer.WithService(service),
+		tracer.WithService(*serviceF),
 		tracer.WithServiceVersion(version),
 	)
 	defer tracer.Stop()
