@@ -22,7 +22,7 @@ var (
 	version    = strings.TrimSpace(rawVersion)
 )
 
-const service = "learning-week"
+const service = "go-prof-app"
 
 func main() {
 	if err := run(); err != nil {
