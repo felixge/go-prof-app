@@ -14,5 +14,3 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	gopkg.in/DataDog/dd-trace-go.v1 v1.30.1-0.20210507131049-ae70d0d7c146
 )
-
-replace gopkg.in/DataDog/dd-trace-go.v1 => /Users/felix.geisendoerfer/go/src/github.com/DataDog/dd-trace-go
