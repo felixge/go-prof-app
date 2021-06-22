@@ -80,7 +80,7 @@ func run() error {
 		return nil
 	}
 
-	log.Printf("Starting up at http %s", *addrF)
+	log.Printf("Starting up %s version %s at http %s", *serviceF, version, *addrF)
 	var profilesS []string
 	for _, p := range profiles {
 		profilesS = append(profilesS, p.String())
