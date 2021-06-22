@@ -89,7 +89,7 @@ func run() error {
 	if !*ddProfiler {
 		log.Printf("Not starting profiler because its disabled")
 	} else {
-		log.Printf("Enabled profiles: %v", profilesS)
+		log.Printf("Starting profiler with: %v", profilesS)
 
 		profilerOptions := []profiler.Option{
 			profiler.WithService(*serviceF),
@@ -117,6 +117,7 @@ func run() error {
 	if !*ddTracer {
 		log.Printf("Profiling disabled, not starting profiler")
 	} else {
+		log.Printf("Starting tracer")
 		tracer.Start(
 			tracer.WithEnv(*envF),
 			tracer.WithService(*serviceF),
