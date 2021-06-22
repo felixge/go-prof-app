@@ -54,6 +54,8 @@ func run() error {
 		ddKey          = flag.String("dd.key", "", "API key for dd-trace-go agentless profile uploading")
 		ddPeriod       = flag.Duration("dd.period", profiler.DefaultPeriod, "Profiling period for dd-trace-go")
 		ddCPUDuration  = flag.Duration("dd.cpuDuration", profiler.DefaultDuration, "CPU duration for dd-trace-go")
+		ddProfiler     = flag.Bool("dd.profiler", true, "Enable dd-trace-go profiler")
+		ddTracer       = flag.Bool("dd.tracer", true, "Enable dd-trace-go tracer")
 		versionF       = flag.Bool("version", false, "Print version and exit")
 	)
 	flag.Func("dd.profiles", `Comma separated list of dd-trace-go profiles to enable (default "cpu,heap")`, func(val string) error {
@@ -83,36 +85,45 @@ func run() error {
 	for _, p := range profiles {
 		profilesS = append(profilesS, p.String())
 	}
-	log.Printf("Enabled profiles: %v", profilesS)
 
-	profilerOptions := []profiler.Option{
-		profiler.WithService(*serviceF),
-		profiler.WithEnv(*envF),
-		profiler.WithVersion(version),
-		profiler.WithProfileTypes(profiles...),
-		profiler.CPUDuration(*ddCPUDuration),
-		profiler.WithPeriod(*ddPeriod),
+	if !*ddProfiler {
+		log.Printf("Not starting profiler because its disabled")
+	} else {
+		log.Printf("Enabled profiles: %v", profilesS)
+
+		profilerOptions := []profiler.Option{
+			profiler.WithService(*serviceF),
+			profiler.WithEnv(*envF),
+			profiler.WithVersion(version),
+			profiler.WithProfileTypes(profiles...),
+			profiler.CPUDuration(*ddCPUDuration),
+			profiler.WithPeriod(*ddPeriod),
+		}
+		if *ddKey != "" {
+			log.Printf("Using agentless uploading")
+			profilerOptions = append(
+				profilerOptions,
+				profiler.WithAPIKey(*ddKey),
+				profiler.WithAgentlessUpload(),
+			)
+		}
+		err := profiler.Start(profilerOptions...)
+		if err != nil {
+			return err
+		}
+		defer profiler.Stop()
 	}
-	if *ddKey != "" {
-		log.Printf("Using agentless uploading")
-		profilerOptions = append(
-			profilerOptions,
-			profiler.WithAPIKey(*ddKey),
-			profiler.WithAgentlessUpload(),
+
+	if !*ddTracer {
+		log.Printf("Profiling disabled, not starting profiler")
+	} else {
+		tracer.Start(
+			tracer.WithEnv(*envF),
+			tracer.WithService(*serviceF),
+			tracer.WithServiceVersion(version),
 		)
+		defer tracer.Stop()
 	}
-	err := profiler.Start(profilerOptions...)
-	if err != nil {
-		return err
-	}
-	defer profiler.Stop()
-
-	tracer.Start(
-		tracer.WithEnv(*envF),
-		tracer.WithService(*serviceF),
-		tracer.WithServiceVersion(version),
-	)
-	defer tracer.Stop()
 
 	sqltrace.Register("pgx", stdlib.GetDefaultDriver())
 	db, err := sqltrace.Open("pgx", "postgres://")
