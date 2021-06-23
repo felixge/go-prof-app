@@ -20,6 +20,8 @@ var (
 	//go:embed version.txt
 	rawVersion string
 	version    = strings.TrimSpace(rawVersion)
+	//go:embed schema.sql
+	schemaSQL string
 )
 
 func main() {
@@ -130,10 +132,10 @@ func run() error {
 	db, err := sqltrace.Open("pgx", "postgres://")
 	if err != nil {
 		return err
-	} else if err := db.Ping(); err != nil {
-		log.Printf("Ping db error: %s", err)
+	} else if _, err := db.Exec(schemaSQL); err != nil {
+		log.Printf("Failed to to apply schema.sql: %s", err)
 	} else {
-		log.Printf("Ping db success")
+		log.Printf("Applied schema.sql")
 	}
 
 	router := httptrace.New()
