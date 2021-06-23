@@ -20,8 +20,7 @@ func (h TransactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	data := r.URL.Query().Get("data")
 	if !doPoW(data, h.PowDifficultiy) {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "pow failure")
+		respondErr(w, http.StatusInternalServerError, "pow failure")
 		return
 	}
 
@@ -29,8 +28,7 @@ func (h TransactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	q := `INSERT INTO transactions (user_id, data) VALUES ($1, $2) RETURNING id`
 	row := h.DB.QueryRowContext(r.Context(), q, userID, data)
 	if err := row.Scan(&txID); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "insert err: %s", err)
+		respondErr(w, http.StatusInternalServerError, "insert err: %s", err)
 		return
 	}
 
