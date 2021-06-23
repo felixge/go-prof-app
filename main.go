@@ -140,6 +140,8 @@ func run() error {
 
 	router := httptrace.New()
 	router.Handler("GET", "/", VersionHandler{Version: version})
+	// Accept GET/POST for transaction endpoint so one can hit it more easily
+	router.Handler("GET", "/transaction", TransactionHandler{DB: db, PowDifficultiy: *powDifficultyF})
 	router.Handler("POST", "/transaction", TransactionHandler{DB: db, PowDifficultiy: *powDifficultyF})
 	return http.ListenAndServe(*addrF, router)
 }
