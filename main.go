@@ -50,6 +50,7 @@ func run() error {
 		}
 
 		addrF          = flag.String("addr", "localhost:8080", "Listen addr for http server")
+		maxConnsF      = flag.Int("maxConns", 20, "Max number of database connections.")
 		serviceF       = flag.String("dd.service", envWithDefault("DD_SERVICE", "go-prof-app"), "Name of the service.")
 		envF           = flag.String("dd.env", envWithDefault("DD_ENV", "dev"), "Name of the environment the app is running in")
 		powDifficultyF = flag.Int("powDifficulty", 4, "Difficulty level for pow")
@@ -137,6 +138,8 @@ func run() error {
 	} else {
 		log.Printf("Applied schema.sql")
 	}
+
+	db.SetMaxOpenConns(*maxConnsF)
 
 	router := httptrace.New()
 	router.Handler("GET", "/", VersionHandler{Version: version})
