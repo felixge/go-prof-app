@@ -130,6 +130,10 @@ func run() error {
 	db, err := sqltrace.Open("pgx", "postgres://")
 	if err != nil {
 		return err
+	} else if err := db.Ping(); err != nil {
+		log.Printf("Ping db error: %s", err)
+	} else {
+		log.Printf("Ping db success")
 	}
 
 	router := httptrace.New()
