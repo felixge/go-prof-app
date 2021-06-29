@@ -125,7 +125,7 @@ func run() error {
 	}
 
 	if !*ddTracer {
-		log.Printf("Profiling disabled, not starting profiler")
+		log.Printf("Tracing disabled, not starting tracer")
 	} else {
 		log.Printf("Starting tracer")
 		tracer.Start(
