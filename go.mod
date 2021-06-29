@@ -3,6 +3,7 @@ module github.com/felixge/go-prof-app
 go 1.16
 
 require (
+	github.com/DataDog/datadog-go v4.8.0+incompatible // indirect
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/google/pprof v0.0.0-20210423192551-a2663126120b // indirect
 	github.com/google/uuid v1.2.0 // indirect

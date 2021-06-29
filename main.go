@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/DataDog/datadog-go/statsd"
 	"github.com/jackc/pgx/v4/stdlib"
 	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter"
@@ -94,6 +95,12 @@ func run() error {
 	} else {
 		log.Printf("Starting profiler with: %v", profilesS)
 
+		// addr comes from DD_AGENT_HOST
+		statsd, err := statsd.New("")
+		if err != nil {
+			return err
+		}
+
 		profilerOptions := []profiler.Option{
 			profiler.WithService(*serviceF),
 			profiler.WithEnv(*envF),
@@ -101,6 +108,7 @@ func run() error {
 			profiler.WithProfileTypes(profiles...),
 			profiler.CPUDuration(*ddCPUDuration),
 			profiler.WithPeriod(*ddPeriod),
+			profiler.WithStatsd(statsd),
 		}
 		if *ddKey != "" {
 			log.Printf("Using agentless uploading")
