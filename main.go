@@ -118,8 +118,7 @@ func run() error {
 				profiler.WithAgentlessUpload(),
 			)
 		}
-		err := profiler.Start(profilerOptions...)
-		if err != nil {
+		if err := profiler.Start(profilerOptions...); err != nil {
 			return err
 		}
 		defer profiler.Stop()
