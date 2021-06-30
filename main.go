@@ -7,7 +7,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
+	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
 	"github.com/jackc/pgx/v4/stdlib"
@@ -90,16 +92,18 @@ func run() error {
 		profilesS = append(profilesS, p.String())
 	}
 
+	// addr comes from DD_AGENT_HOST
+	statsd, err := statsd.New("")
+	if err != nil {
+		log.Printf("Failed to init statsd client: %s", err)
+	} else {
+		go reportMemstats(statsd)
+	}
+
 	if !*ddProfiler {
 		log.Printf("Not starting profiler because its disabled")
 	} else {
 		log.Printf("Starting profiler with: %v", profilesS)
-
-		// addr comes from DD_AGENT_HOST
-		statsd, err := statsd.New("")
-		if err != nil {
-			return err
-		}
 
 		profilerOptions := []profiler.Option{
 			profiler.WithService(*serviceF),
@@ -154,4 +158,39 @@ func run() error {
 	router.Handler("GET", "/transaction", TransactionHandler{DB: db, PowDifficultiy: *powDifficultyF})
 	router.Handler("POST", "/transaction", TransactionHandler{DB: db, PowDifficultiy: *powDifficultyF})
 	return http.ListenAndServe(*addrF, router)
+}
+
+func reportMemstats(statsd *statsd.Client) {
+	for {
+		var stats runtime.MemStats
+		runtime.ReadMemStats(&stats)
+		fmt.Printf("REPORTING MEMSTATS\n")
+		statsd.Gauge("go.memstats.alloc", float64(stats.Alloc), nil, 1)
+		statsd.Gauge("go.memstats.buckhashsys", float64(stats.BuckHashSys), nil, 1)
+		statsd.Gauge("go.memstats.frees", float64(stats.Frees), nil, 1)
+		statsd.Gauge("go.memstats.gccpufraction", float64(stats.GCCPUFraction), nil, 1)
+		statsd.Gauge("go.memstats.gcsys", float64(stats.GCSys), nil, 1)
+		statsd.Gauge("go.memstats.heapalloc", float64(stats.HeapAlloc), nil, 1)
+		statsd.Gauge("go.memstats.heapidle", float64(stats.HeapIdle), nil, 1)
+		statsd.Gauge("go.memstats.heapinuse", float64(stats.HeapInuse), nil, 1)
+		statsd.Gauge("go.memstats.heapobjects", float64(stats.HeapObjects), nil, 1)
+		statsd.Gauge("go.memstats.heapreleased", float64(stats.HeapReleased), nil, 1)
+		statsd.Gauge("go.memstats.heapsys", float64(stats.HeapSys), nil, 1)
+		statsd.Gauge("go.memstats.lastgc", float64(stats.LastGC), nil, 1)
+		statsd.Gauge("go.memstats.lookups", float64(stats.Lookups), nil, 1)
+		statsd.Gauge("go.memstats.mcacheinuse", float64(stats.MCacheInuse), nil, 1)
+		statsd.Gauge("go.memstats.mcachesys", float64(stats.MCacheSys), nil, 1)
+		statsd.Gauge("go.memstats.mspaninuse", float64(stats.MSpanInuse), nil, 1)
+		statsd.Gauge("go.memstats.mspansys", float64(stats.MSpanSys), nil, 1)
+		statsd.Gauge("go.memstats.mallocs", float64(stats.Mallocs), nil, 1)
+		statsd.Gauge("go.memstats.numforcedgc", float64(stats.NumForcedGC), nil, 1)
+		statsd.Gauge("go.memstats.numgc", float64(stats.NumGC), nil, 1)
+		statsd.Gauge("go.memstats.othersys", float64(stats.OtherSys), nil, 1)
+		statsd.Gauge("go.memstats.pausetotalns", float64(stats.PauseTotalNs), nil, 1)
+		statsd.Gauge("go.memstats.stackinuse", float64(stats.StackInuse), nil, 1)
+		statsd.Gauge("go.memstats.stacksys", float64(stats.StackSys), nil, 1)
+		statsd.Gauge("go.memstats.sys", float64(stats.Sys), nil, 1)
+		statsd.Gauge("go.memstats.totalalloc", float64(stats.TotalAlloc), nil, 1)
+		time.Sleep(10 * time.Second)
+	}
 }
