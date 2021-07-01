@@ -164,7 +164,6 @@ func reportMemstats(statsd *statsd.Client) {
 	for {
 		var stats runtime.MemStats
 		runtime.ReadMemStats(&stats)
-		fmt.Printf("REPORTING MEMSTATS\n")
 		statsd.Gauge("go.memstats.alloc", float64(stats.Alloc), nil, 1)
 		statsd.Gauge("go.memstats.buckhashsys", float64(stats.BuckHashSys), nil, 1)
 		statsd.Gauge("go.memstats.frees", float64(stats.Frees), nil, 1)
