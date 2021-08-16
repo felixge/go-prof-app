@@ -7,7 +7,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
+	"runtime/trace"
 	"strings"
 	"time"
 
@@ -62,6 +64,7 @@ func run() error {
 		ddCPUDuration  = flag.Duration("dd.cpuDuration", profiler.DefaultDuration, "CPU duration for dd-trace-go")
 		ddProfiler     = flag.Bool("dd.profiler", true, "Enable dd-trace-go profiler")
 		ddTracer       = flag.Bool("dd.tracer", true, "Enable dd-trace-go tracer")
+		traceF         = flag.String("trace", "", "Capture execution trace to file.")
 		versionF       = flag.Bool("version", false, "Print version and exit")
 	)
 	flag.Func("dd.profiles", `Comma separated list of dd-trace-go profiles to enable (default "cpu,heap")`, func(val string) error {
@@ -87,6 +90,21 @@ func run() error {
 	}
 
 	log.Printf("Starting up %s version %s at http %s", *serviceF, version, *addrF)
+
+	if *traceF != "" {
+		log.Printf("Capturing executiong trace to %q", *traceF)
+		traceFile, err := os.Create(*traceF)
+		if err != nil {
+			return err
+		}
+		defer traceFile.Close()
+
+		if err := trace.Start(traceFile); err != nil {
+			return err
+		}
+		defer trace.Stop()
+	}
+
 	var profilesS []string
 	for _, p := range profiles {
 		profilesS = append(profilesS, p.String())
@@ -157,7 +175,14 @@ func run() error {
 	// Accept GET/POST for transaction endpoint so one can hit it more easily
 	router.Handler("GET", "/transaction", TransactionHandler{DB: db, PowDifficultiy: *powDifficultyF})
 	router.Handler("POST", "/transaction", TransactionHandler{DB: db, PowDifficultiy: *powDifficultyF})
-	return http.ListenAndServe(*addrF, router)
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt)
+	go http.ListenAndServe(*addrF, router)
+
+	sig := <-sigCh
+	log.Printf("Received %s, shutting down", sig)
+	return nil
 }
 
 func reportMemstats(statsd *statsd.Client) {
