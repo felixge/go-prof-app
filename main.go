@@ -154,6 +154,8 @@ func run() error {
 			tracer.WithEnv(*envF),
 			tracer.WithService(*serviceF),
 			tracer.WithServiceVersion(version),
+			tracer.WithProfilerCodeHotspots(true),
+			tracer.WithProfilerEndpoints(true),
 		)
 		defer tracer.Stop()
 	}
