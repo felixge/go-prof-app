@@ -5,10 +5,10 @@ These notes are mostly intended for myself :).
 ## Release process
 
 ```
-vim version.txt
-git add version.txt
-git commit -m "Release $(cat version.txt)"
-git tag $(cat version.txt)
+git checkout candidate
+# <hack code>
+git commit -m "New stuff"
+git tag candidate/<N>
 git push
 git push --tags
 ```
