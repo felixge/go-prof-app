@@ -13,5 +13,5 @@ require (
 	github.com/philhofer/fwd v1.1.1 // indirect
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	gopkg.in/DataDog/dd-trace-go.v1 v1.33.1-0.20210915130901-a9d3b70fc11c
+	gopkg.in/DataDog/dd-trace-go.v1 v1.33.1-0.20210917101258-b4eb59dc6cb5
 )
