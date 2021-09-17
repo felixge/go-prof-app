@@ -22,9 +22,7 @@ import (
 )
 
 var (
-	//go:embed version.txt
-	rawVersion string
-	version    = strings.TrimSpace(rawVersion)
+	version = "n/a"
 	//go:embed schema.sql
 	schemaSQL string
 )
