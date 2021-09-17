@@ -506,8 +506,8 @@ google.golang.org/protobuf v1.22.0/go.mod h1:EGpADcykh3NcUnDUJcl1+ZksZNG86OlYog2
 google.golang.org/protobuf v1.23.1-0.20200526195155-81db48ad09cc/go.mod h1:EGpADcykh3NcUnDUJcl1+ZksZNG86OlYog2l/sGQquU=
 google.golang.org/protobuf v1.25.0 h1:Ejskq+SyPohKW+1uil0JJMtmHCgJPJ/qWTxr8qp+R4c=
 google.golang.org/protobuf v1.25.0/go.mod h1:9JNX74DMeImyA3h4bdi1ymwjUzf21/xIlbajtzgsN7c=
-gopkg.in/DataDog/dd-trace-go.v1 v1.33.1-0.20210915130901-a9d3b70fc11c h1:50tI0Zo8/A7ad4ttgA7kitWRroQDV16svNSp46RxxI8=
-gopkg.in/DataDog/dd-trace-go.v1 v1.33.1-0.20210915130901-a9d3b70fc11c/go.mod h1:MFdmxQL1OfAGjPrYPU02P82Z5lJ/19f4JVAvXwK1brY=
+gopkg.in/DataDog/dd-trace-go.v1 v1.33.0 h1:goLas2M46NJ1NH6c5sPUI/KrYAaaiBZkctJMj2dgJ/w=
+gopkg.in/DataDog/dd-trace-go.v1 v1.33.0/go.mod h1:MFdmxQL1OfAGjPrYPU02P82Z5lJ/19f4JVAvXwK1brY=
 gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
