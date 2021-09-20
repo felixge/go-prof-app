@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"sync"
 )
 
 type TransactionHandler struct {
@@ -36,8 +37,22 @@ func (h TransactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func doPoW(data string, difficulty int) bool {
-	pow, nonce := calculatePoW(difficulty, data)
-	return verifyPoW(data, pow, difficulty, nonce)
+	var (
+		wg     sync.WaitGroup
+		result bool
+	)
+
+	// Do work in goroutine to make it more difficult to correlated in
+	// profiling without endpoint filter feature.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		pow, nonce := calculatePoW(difficulty, data)
+		result = verifyPoW(data, pow, difficulty, nonce)
+	}()
+	wg.Wait()
+
+	return result
 }
 
 func calculatePoW(difficulty int, data string) (string, int) {
