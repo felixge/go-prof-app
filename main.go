@@ -129,6 +129,7 @@ func run() error {
 			profiler.CPUDuration(*ddCPUDuration),
 			profiler.WithPeriod(*ddPeriod),
 			profiler.WithStatsd(statsd),
+			profiler.WithTags("go_version:" + runtime.Version()),
 		}
 		if *ddKey != "" {
 			log.Printf("Using agentless uploading")
@@ -154,6 +155,7 @@ func run() error {
 			tracer.WithServiceVersion(version),
 			tracer.WithProfilerCodeHotspots(true),
 			tracer.WithProfilerEndpoints(true),
+			tracer.WithGlobalTag("go_version", runtime.Version()),
 		)
 		defer tracer.Stop()
 	}
