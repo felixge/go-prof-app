@@ -5,10 +5,13 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"runtime"
+	"runtime/metrics"
 	"runtime/trace"
 	"strings"
 	"time"
@@ -114,6 +117,7 @@ func run() error {
 		log.Printf("Failed to init statsd client: %s", err)
 	} else {
 		go reportMemstats(statsd)
+		go reportMetrics(statsd)
 	}
 
 	if !*ddProfiler {
@@ -219,4 +223,128 @@ func reportMemstats(statsd *statsd.Client) {
 		statsd.Gauge("go.memstats.totalalloc", float64(stats.TotalAlloc), nil, 1)
 		time.Sleep(10 * time.Second)
 	}
+}
+
+func reportMetrics(statsd *statsd.Client) {
+	descs := metrics.All()
+	samples := make([]metrics.Sample, len(descs))
+	for i := range samples {
+		samples[i].Name = descs[i].Name
+	}
+
+	for {
+		metrics.Read(samples)
+		for _, sample := range samples {
+			name, value := sample.Name, sample.Value
+			name, unit := metricName(name)
+
+			switch value.Kind() {
+			case metrics.KindUint64:
+				statsd.Gauge(name+"."+unit, float64(value.Uint64()), nil, 1)
+			case metrics.KindFloat64:
+				statsd.Gauge(name+"."+unit, value.Float64(), nil, 1)
+			case metrics.KindFloat64Histogram:
+				stats := newHistStats(value.Float64Histogram())
+				statsd.Gauge(name+".avg."+unit, stats.Avg, nil, 1)
+				statsd.Gauge(name+".min."+unit, stats.Min, nil, 1)
+				statsd.Gauge(name+".max."+unit, stats.Max, nil, 1)
+				statsd.Gauge(name+".median."+unit, stats.Median, nil, 1)
+				statsd.Gauge(name+".p95."+unit, stats.P95, nil, 1)
+				statsd.Gauge(name+".p99."+unit, stats.P99, nil, 1)
+			case metrics.KindBad:
+				// This should never happen because all metrics are supported
+				// by construction.
+				panic("bug in runtime/metrics package!")
+			default:
+				// This may happen as new metrics get added.
+				//
+				// The safest thing to do here is to simply log it somewhere
+				// as something to look into, but ignore it for now.
+				// In the worst case, you might temporarily miss out on a new metric.
+				fmt.Printf("%s: unexpected metric Kind: %v\n", name, value.Kind())
+			}
+		}
+		time.Sleep(10 * time.Second)
+	}
+}
+
+func newHistStats(h *metrics.Float64Histogram) (s histStats) {
+	// TODO(fg) very inefficent implementation
+	s.Avg = histAvg(h)
+	s.Min = histPercentile(h, 0)
+	s.Median = histPercentile(h, 0.5)
+	s.P95 = histPercentile(h, 0.95)
+	s.P99 = histPercentile(h, 0.99)
+	s.Max = histPercentile(h, 1)
+	return
+}
+
+type histStats struct {
+	Avg    float64
+	Min    float64 // aka P0
+	Median float64 // aka P50
+	P95    float64
+	P99    float64
+	Max    float64 // aka P100
+}
+
+// see https://www.statology.org/histogram-mean-median/
+func histAvg(h *metrics.Float64Histogram) float64 {
+	var sum float64
+	var count float64
+	for i, val := range h.Counts {
+		min, max := h.Buckets[i], h.Buckets[i+1]
+		// TODO(fg) is there a better way?
+		if math.IsInf(min, 0) || math.IsInf(max, 0) {
+			continue
+		}
+		sum += float64(val) * (min + max) / 2
+		count += float64(val)
+	}
+	return sum / count
+}
+
+// see https://stats.stackexchange.com/a/65718
+func histPercentile(h *metrics.Float64Histogram, p float64) float64 {
+	var countSum uint64
+	for i, count := range h.Counts {
+		min, max := h.Buckets[i], h.Buckets[i+1]
+		// TODO(fg) is there a better way?
+		if math.IsInf(min, 0) || math.IsInf(max, 0) {
+			continue
+		}
+		countSum += count
+	}
+	var countCum uint64
+	var min, max float64
+	for i, count := range h.Counts {
+		min, max = h.Buckets[i], h.Buckets[i+1]
+		// TODO(fg) is there a better way?
+		if math.IsInf(min, 0) || math.IsInf(max, 0) {
+			continue
+		}
+
+		if p == 0 {
+			return min
+		}
+
+		countCum += count
+		if float64(countCum) >= float64(countSum)*p {
+			break
+		}
+	}
+	if p == 1 {
+		return max
+	}
+	return (min + max) / 2
+}
+
+var metricRegex = regexp.MustCompile("^(?P<name>/[^:]+):(?P<unit>[^:*/]+(?:[*/][^:*/]+)*)$")
+
+func metricName(runtimeName string) (string, string) {
+	m := metricRegex.FindStringSubmatch(runtimeName)
+	if len(m) != 3 {
+		return "", ""
+	}
+	return "runtime.go.metrics." + strings.ReplaceAll(m[1][1:], "/", "."), m[2]
 }
