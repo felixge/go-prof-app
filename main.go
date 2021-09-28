@@ -117,7 +117,7 @@ func run() error {
 		log.Printf("Failed to init statsd client: %s", err)
 	} else {
 		go reportMemstats(statsd)
-		go reportMetrics(statsd)
+		go reportRuntimeMetrics(statsd)
 	}
 
 	if !*ddProfiler {
