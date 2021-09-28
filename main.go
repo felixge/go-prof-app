@@ -225,7 +225,7 @@ func reportMemstats(statsd *statsd.Client) {
 	}
 }
 
-func reportMetrics(statsd *statsd.Client) {
+func reportMetrics(statsd statsd.ClientInterface) {
 	descs := metrics.All()
 	samples := make([]metrics.Sample, len(descs))
 	for i := range samples {
@@ -244,6 +244,15 @@ func reportMetrics(statsd *statsd.Client) {
 			case metrics.KindFloat64:
 				statsd.Gauge(name+"."+unit, value.Float64(), nil, 1)
 			case metrics.KindFloat64Histogram:
+				//if name == "runtime.go.metrics.sched.latencies" {
+				//for _, v := range value.Float64Histogram().Buckets {
+				//if math.IsInf(v, 0) {
+				//continue
+				//}
+				//fmt.Printf("%s ", time.Duration(v*float64(time.Second)))
+				//}
+				//fmt.Printf("\n---------------------\n")
+				//}
 				stats := newHistStats(value.Float64Histogram())
 				statsd.Gauge(name+".avg."+unit, stats.Avg, nil, 1)
 				statsd.Gauge(name+".min."+unit, stats.Min, nil, 1)

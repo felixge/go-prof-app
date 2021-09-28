@@ -4,13 +4,18 @@ import (
 	"math"
 	"runtime/metrics"
 	"testing"
+	"time"
+
+	"github.com/DataDog/datadog-go/statsd"
 )
 
-//func Test_metricName(t *testing.T) {
-//for _, d := range metrics.All() {
-//fmt.Printf("%s -> %s\n", d.Name, metricName(d.Name))
-//}
-//}
+func Test_metricName(t *testing.T) {
+	go reportMetrics(&statsd.NoOpClient{})
+	time.Sleep(10 * time.Second)
+	//for _, d := range metrics.All() {
+	//fmt.Printf("%s -> %s\n", d.Name, metricName(d.Name))
+	//}
+}
 
 func Test_newHistStats(t *testing.T) {
 	tests := []struct {

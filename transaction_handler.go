@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 type TransactionHandler struct {
@@ -19,19 +21,25 @@ func (h TransactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	powSpan, _ := tracer.StartSpanFromContext(r.Context(), "pow")
 	data := r.URL.Query().Get("data")
 	if !doPoW(data, h.PowDifficultiy) {
+		powSpan.Finish()
 		respondErr(w, http.StatusInternalServerError, "pow failure")
 		return
 	}
+	powSpan.Finish()
 
+	span, ctx := tracer.StartSpanFromContext(r.Context(), "insert")
 	var txID int
 	q := `INSERT INTO transactions (user_id, data) VALUES ($1, $2) RETURNING id`
-	row := h.DB.QueryRowContext(r.Context(), q, userID, data)
+	row := h.DB.QueryRowContext(ctx, q, userID, data)
 	if err := row.Scan(&txID); err != nil {
+		span.Finish()
 		respondErr(w, http.StatusInternalServerError, "insert err: %s", err)
 		return
 	}
+	span.Finish()
 
 	fmt.Fprintf(w, "recorded transaction: %d\n", txID)
 }
