@@ -178,6 +178,7 @@ func run() error {
 
 	router := httptrace.New()
 	router.Handler("GET", "/", VersionHandler{Version: version})
+	router.Handler("GET", "/posts", PostsHandler{DB: db})
 	// Accept GET/POST for transaction endpoint so one can hit it more easily
 	router.Handler("GET", "/transaction", TransactionHandler{DB: db, PowDifficultiy: *powDifficultyF})
 	router.Handler("POST", "/transaction", TransactionHandler{DB: db, PowDifficultiy: *powDifficultyF})
