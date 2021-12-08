@@ -13,7 +13,7 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/philhofer/fwd v1.1.1 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
-	gopkg.in/DataDog/dd-trace-go.v1 v1.33.1-0.20210920120856-11218f0f874a
+	gopkg.in/DataDog/dd-trace-go.v1 v1.34.0
 )
 
 // replace gopkg.in/DataDog/dd-trace-go.v1 => /Users/felix.geisendoerfer/go/src/github.com/DataDog/dd-trace-go
