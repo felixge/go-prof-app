@@ -9,13 +9,14 @@ release:
 	$(GO_GET_DD_TRACE_GO)@$(RELEASE_VERSION)
 	go get .
 	$(call GO_INSTALL,release)
+	git checkout go.* # cleanup
 
 .PHONY: candidate
 candidate:
 	$(GO_GET_DD_TRACE_GO)@$(CANDIDATE_VERSION)
 	go get .
 	$(call GO_INSTALL,candidate)
+	git checkout go.* # cleanup
 
 .PHONY: test_install
 test_install: release candidate
-	git checkout go.* # cleanup
