@@ -157,8 +157,6 @@ func run() error {
 			tracer.WithEnv(*envF),
 			tracer.WithService(*serviceF),
 			tracer.WithServiceVersion(version),
-			tracer.WithProfilerCodeHotspots(true),
-			tracer.WithProfilerEndpoints(true),
 			tracer.WithGlobalTag("go_version", runtime.Version()),
 		)
 		defer tracer.Stop()
