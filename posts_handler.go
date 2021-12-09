@@ -2,96 +2,90 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
-	"io"
-	"math/rand"
 	"net/http"
 	"sync"
 	"time"
-
-	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
-type PostsHandler struct{ DB *sql.DB }
+type PostsHandler struct {
+	DB          *sql.DB
+	CPUDuration time.Duration
+	SQLDuration time.Duration
+}
 
-func (h PostsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *PostsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth(h.DB, w, r)
 	if !ok {
 		return
 	}
 
-	var (
-		err   error
-		posts []Post
-	)
-	func() {
-		span, ctx := tracer.StartSpanFromContext(r.Context(), "get posts")
-		defer func() { span.Finish(tracer.WithError(err)) }()
+	posts, err := h.ioWork(r.Context(), userID)
+	if err != nil {
+		respondErr(w, http.StatusInternalServerError, "ioWork: %s", err)
+		return
+	}
 
-		q := `SELECT id, user_id, title, body FROM posts WHERE user_id = $1`
-		var rows *sql.Rows
-		rows, err = h.DB.QueryContext(ctx, q, userID)
-		if err != nil {
+	data, err := h.cpuWork(posts)
+	if err != nil {
+		respondErr(w, http.StatusInternalServerError, "cpuWork: %s", err)
+		return
+	}
+	w.Write(data)
+}
+
+func (h *PostsHandler) ioWork(ctx context.Context, userID int) ([]*Post, error) {
+	q := `SELECT id, user_id, title, body FROM posts, pg_sleep($1) WHERE user_id = $2`
+	var rows *sql.Rows
+	rows, err := h.DB.QueryContext(ctx, q, h.SQLDuration.Seconds(), userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []*Post
+	for rows.Next() {
+		var p Post
+		if err = rows.Scan(&p.ID, &p.UserID, &p.Title, &p.Body); err != nil {
+			return nil, err
+		}
+		posts = append(posts, &p)
+	}
+	return posts, nil
+}
+
+func (h *PostsHandler) cpuWork(posts []*Post) ([]byte, error) {
+	var (
+		wg   sync.WaitGroup
+		stop = make(chan struct{})
+		data []byte
+	)
+	wg.Add(1)
+	go cpuHog(posts, &data, &wg, stop)
+	time.Sleep(h.CPUDuration)
+	close(stop)
+	wg.Wait()
+	return data, nil
+}
+
+//go:noinline
+func cpuHog(posts []*Post, data *[]byte, wg *sync.WaitGroup, stop chan struct{}) {
+	defer wg.Done()
+
+	for {
+		var buf bytes.Buffer
+		if err := json.NewEncoder(&buf).Encode(posts); err != nil {
 			return
 		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var p Post
-			if err = rows.Scan(&p.ID, &p.UserID, &p.Title, &p.Body); err != nil {
-				return
-			}
-			posts = append(posts, p)
+		select {
+		case <-stop:
+			*data = buf.Bytes()
+			return
+		default:
+			buf.Reset()
 		}
-	}()
-
-	if err != nil {
-		respondErr(w, http.StatusInternalServerError, "select err: %s", err)
-		return
-	}
-
-	cpuDurationS := "100ms"
-	if v := r.URL.Query().Get("cpu"); v != "" {
-		cpuDurationS = v
-	}
-	var cpuDuration time.Duration
-	if cpuDuration, err = time.ParseDuration(cpuDurationS); err != nil {
-		respondErr(w, http.StatusInternalServerError, "bad cpu time", err)
-		return
-	}
-
-	cpuDuration = time.Duration(float64(cpuDuration) * rand.Float64())
-
-	var wg sync.WaitGroup
-	stopCh := make(chan struct{})
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		span, _ := tracer.StartSpanFromContext(r.Context(), "cpu hog")
-		defer func() { span.Finish(tracer.WithError(err)) }()
-
-		for {
-			var buf bytes.Buffer
-			if err = json.NewEncoder(&buf).Encode(posts); err != nil {
-				return
-			}
-			select {
-			case <-stopCh:
-				io.Copy(w, &buf)
-				return
-			default:
-			}
-		}
-	}()
-
-	time.Sleep(cpuDuration)
-	close(stopCh)
-	wg.Wait()
-
-	if err != nil {
-		respondErr(w, http.StatusInternalServerError, "insert err: %s", err)
-		return
 	}
 }
 
