@@ -1,22 +1,8 @@
-RELEASE_VERSION:=v1.34.0
-CANDIDATE_VERSION:=b956dd4cc7bc485f4db19fc3cf3a64fc7c117ca5
+BUILD_VARIANT=release
+DD_TRACE_GO_VERSION:=v1.34.0
 
-GO_INSTALL = go install -ldflags "-X main.version=$(1)/`git describe --tags HEAD`" -tags $1
-GO_GET_DD_TRACE_GO=go get gopkg.in/DataDog/dd-trace-go.v1
-
-.PHONY: release
-release:
-	$(GO_GET_DD_TRACE_GO)@$(RELEASE_VERSION)
+.PHONY: install
+install:
+	go get gopkg.in/DataDog/dd-trace-go.v1@$(DD_TRACE_GO_VERSION)
 	go get .
-	$(call GO_INSTALL,release)
-	git checkout go.* # cleanup
-
-.PHONY: candidate
-candidate:
-	$(GO_GET_DD_TRACE_GO)@$(CANDIDATE_VERSION)
-	go get .
-	$(call GO_INSTALL,candidate)
-	git checkout go.* # cleanup
-
-.PHONY: test_install
-test_install: release candidate
+	go install -ldflags "-X main.version=$(BUILD_VARIANT)/`git describe --tags HEAD`" -tags $(BUILD_VARIANT)
