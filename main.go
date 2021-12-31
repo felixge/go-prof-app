@@ -186,6 +186,12 @@ func run() error {
 		CPUDuration: 90 * time.Millisecond,
 		SQLDuration: 10 * time.Millisecond,
 	})
+	router.Handler("GET", "/cgo-cpu-bound", &PostsHandler{
+		DB:          db,
+		CPUDuration: 90 * time.Millisecond,
+		SQLDuration: 10 * time.Millisecond,
+		CGO:         true,
+	})
 	// Accept GET/POST for transaction endpoint so one can hit it more easily
 	router.Handler("GET", "/transaction", TransactionHandler{DB: db, PowDifficultiy: *powDifficultyF})
 	router.Handler("POST", "/transaction", TransactionHandler{DB: db, PowDifficultiy: *powDifficultyF})

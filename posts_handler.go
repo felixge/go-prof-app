@@ -5,15 +5,31 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
 )
 
+/*
+
+// cpuHog tries to waste about 1ms of CPU time.
+long cpuHog() {
+	long sum = 0;
+	for (long i = 0; i < 1000000; i++) {
+		sum += i % 10;
+	}
+	return sum;
+}
+*/
+import "C"
+
 type PostsHandler struct {
 	DB          *sql.DB
 	CPUDuration time.Duration
 	SQLDuration time.Duration
+	// CGO determines if cgo is used for simulating the CPUDuration.
+	CGO bool
 }
 
 func (h *PostsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +79,11 @@ func (h *PostsHandler) cpuWork(posts []*Post) ([]byte, error) {
 		data []byte
 	)
 	wg.Add(1)
-	go cpuHog(posts, &data, &wg, stop)
+	if h.CGO {
+		go cgoCPUHog(posts, &data, &wg, stop)
+	} else {
+		go goCPUHog(posts, &data, &wg, stop)
+	}
 	time.Sleep(h.CPUDuration)
 	close(stop)
 	wg.Wait()
@@ -71,7 +91,29 @@ func (h *PostsHandler) cpuWork(posts []*Post) ([]byte, error) {
 }
 
 //go:noinline
-func cpuHog(posts []*Post, data *[]byte, wg *sync.WaitGroup, stop chan struct{}) {
+func cgoCPUHog(posts []*Post, data *[]byte, wg *sync.WaitGroup, stop chan struct{}) {
+	defer wg.Done()
+
+loop:
+	for {
+		select {
+		case <-stop:
+			break loop
+		default:
+			start := time.Now()
+			C.cpuHog()
+			fmt.Printf("time.Since(start): %v\n", time.Since(start))
+		}
+	}
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(posts); err != nil {
+		return
+	}
+	*data = buf.Bytes()
+}
+
+//go:noinline
+func goCPUHog(posts []*Post, data *[]byte, wg *sync.WaitGroup, stop chan struct{}) {
 	defer wg.Done()
 
 	for {
