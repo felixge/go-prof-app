@@ -15,7 +15,9 @@ import (
 #cgo experimental_cmemprof CFLAGS: -DUSE_GMP
 #include <stdlib.h>
 
+#ifdef USE_GMP
 #include <gmp.h>
+#endif
 
 long *side_effect;
 
