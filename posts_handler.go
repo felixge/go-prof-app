@@ -11,7 +11,8 @@ import (
 )
 
 /*
-#cgo LDFLAGS: -lgmp
+#cgo experimental_cmemprof LDFLAGS: -lgmp
+#cgo experimental_cmemprof CFLAGS: -DUSE_GMP
 #include <stdlib.h>
 
 #include <gmp.h>
@@ -26,18 +27,25 @@ long cpuHog() {
 	side_effect = p;
 	free(p);
 
+	long sum = 0;
+	#ifdef USE_GMP
 	// Do some GMP stuff to get memory allocation from a third-party shared
 	// library. We use p to make sure all the operations in this function
 	// are intertwined and hopefully don't get optimized away
 	mpz_t foo;
 	mpz_init_set_ui(foo, (unsigned long int) p);
 	mpz_pow_ui(foo, foo, 42);
+	sum = mpz_odd_p(foo);
+	#endif
 
-	long sum = mpz_odd_p(foo);
 	for (long i = 0; i < 1000000; i++) {
 		sum += i % 10;
 	}
+
+	#ifdef USE_GMP
 	mpz_clear(foo);
+	#endif
+
 	return sum;
 }
 */
