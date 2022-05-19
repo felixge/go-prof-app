@@ -18,6 +18,7 @@ import (
 
 	"github.com/DataDog/datadog-go/statsd"
 	"github.com/jackc/pgx/v4/stdlib"
+	_ "github.com/nsrip-dd/cgotraceback"
 	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
