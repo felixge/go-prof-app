@@ -8,6 +8,7 @@ require (
 	github.com/jackc/pgx/v4 v4.13.0
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/mattn/go-sqlite3 v1.14.8 // indirect
+	github.com/nsrip-dd/cgotraceback v0.0.0-20220518170113-75f7f93d1852 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	gopkg.in/DataDog/dd-trace-go.v1 v1.36.0
 )
