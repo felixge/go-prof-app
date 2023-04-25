@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	_ "embed"
 	"flag"
 	"fmt"
@@ -166,11 +167,15 @@ func run() error {
 	db, err := sqltrace.Open("pgx", "postgres://")
 	if err != nil {
 		return err
-	} else if _, err := db.Exec(schemaSQL); err != nil {
-		log.Printf("Failed to to apply schema.sql: %s", err)
+	} else if err := applySchema(db); err != nil {
+		// Warn about this, we'll keep retrying below anyway.
+		log.Printf("Failed to apply schema: %s", err)
 	} else {
-		log.Printf("Applied schema.sql")
+		log.Printf("Applied schema")
 	}
+	// Hack: The database we're talking to can sometimes be recreated ... restore
+	// the schema if this happens.
+	go restoreSchemaIfLost(db)
 
 	db.SetMaxOpenConns(*maxConnsF)
 
@@ -203,6 +208,49 @@ func run() error {
 	sig := <-sigCh
 	log.Printf("Received %s, shutting down", sig)
 	return nil
+}
+
+func applySchema(db *sql.DB) error {
+	_, err := db.Exec(schemaSQL)
+	if err != nil {
+		return fmt.Errorf("applySchema: %w", err)
+	}
+	return nil
+}
+
+func restoreSchemaIfLost(db *sql.DB) {
+	for {
+		var err error
+		var exists bool
+		if exists, err = checkUsersTableExists(db); err == nil && !exists {
+			if err = applySchema(db); err == nil {
+				log.Printf("Lost schema, but succeeded to restore it :)")
+			}
+		}
+
+		if err != nil {
+			log.Printf("Lost schema and failed to restore it: %s", err)
+		}
+		time.Sleep(time.Second)
+	}
+}
+
+func checkUsersTableExists(db *sql.DB) (bool, error) {
+	const query = `
+	SELECT EXISTS (
+		SELECT FROM information_schema.tables
+		WHERE table_schema = 'public'
+		AND table_name = 'users'
+	);
+	`
+
+	var exists bool
+	err := db.QueryRow(query).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("checkUsersTableExists: %w", err)
+	}
+
+	return exists, nil
 }
 
 func reportMemstats(statsd *statsd.Client) {
