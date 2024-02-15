@@ -159,6 +159,7 @@ func run() error {
 			tracer.WithService(*serviceF),
 			tracer.WithServiceVersion(version),
 			tracer.WithGlobalTag("go_version", runtime.Version()),
+			tracer.WithRuntimeMetrics(),
 		)
 		defer tracer.Stop()
 	}
