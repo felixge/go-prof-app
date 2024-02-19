@@ -203,7 +203,13 @@ func run() error {
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt)
-	go http.ListenAndServe(*addrF, router)
+
+	server := &http.Server{
+		Addr:        *addrF,
+		Handler:     router,
+		IdleTimeout: 60 * time.Second,
+	}
+	go server.ListenAndServe()
 
 	sig := <-sigCh
 	log.Printf("Received %s, shutting down", sig)
