@@ -93,6 +93,8 @@ func run() error {
 
 	log.Printf("Starting up %s version %s at http %s", *serviceF, version, *addrF)
 
+	mallocTrimEvery(time.Minute)
+
 	if *traceF != "" {
 		log.Printf("Capturing executiong trace to %q", *traceF)
 		traceFile, err := os.Create(*traceF)
