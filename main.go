@@ -18,11 +18,11 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
+	sqltrace "github.com/DataDog/dd-trace-go/contrib/database/sql/v2"
+	httptrace "github.com/DataDog/dd-trace-go/contrib/julienschmidt/httprouter/v2"
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
+	"github.com/DataDog/dd-trace-go/v2/profiler"
 	"github.com/jackc/pgx/v4/stdlib"
-	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
-	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter"
-	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
-	"gopkg.in/DataDog/dd-trace-go.v1/profiler"
 )
 
 var (
@@ -142,11 +142,8 @@ func run() error {
 		}
 		if *ddKey != "" {
 			log.Printf("Using agentless uploading")
-			profilerOptions = append(
-				profilerOptions,
-				profiler.WithAPIKey(*ddKey),
-				profiler.WithAgentlessUpload(),
-			)
+			os.Setenv("DD_PROFILING_AGENTLESS", "true")
+			os.Setenv("DD_API_KEY", *ddKey)
 		}
 		if err := profiler.Start(profilerOptions...); err != nil {
 			return err
